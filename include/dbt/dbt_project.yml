@@ -1,0 +1,9 @@
+name: 'dbt_project'
+version: '1.0.0'
+config-version: 2
+profile: 'dbt_project'
+
+models:
+  materialized: incremental
+  report:
+      materialized: view

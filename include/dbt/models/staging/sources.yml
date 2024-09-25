@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: mobile
+    database: data-435516
+    dataset: Mobile
+    tables:
+      - name: staging_csv_data
+      - name: staging_json_data
+      - name: staging_parquet_data
+      - name: rate_exchange_data
