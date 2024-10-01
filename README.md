@@ -1,48 +1,78 @@
-Overview
-========
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+# Mobile Sales ETL Pipeline: Data Warehousing with dbt, Airflow, and BigQuery
 
-Project Contents
-================
+I am undertaking this project to gain hands-on experience in building a data warehouse and to deepen my understanding of how dbt, Airflow, and BigQuery work in concert.
 
-Your Astro project contains the following files and folders:
+## 1. Introduction
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+This project focuses on building an data pipeline to manage, transform, and analyze sales data from mobile phone retailers on Amazon. The pipeline utilizes Apache Airflow for orchestration, Google Cloud Storage for data management, BigQuery for data warehousing, and dbt for transformation.
 
-Deploy Your Project Locally
-===========================
+## 2. Dataset overview
 
-1. Start Airflow on your local machine by running 'astro dev start'.
+The dataset used for this project contains order transactions from mobile phone retailers on Amazon in 3 different countries (USA, India, France) in January 2020. Each record in the dataset represents a single order and includes detailed information about the customer's purchase, shipping status, and payment details. Below are the key columns present in the dataset:
 
-This command will spin up 4 Docker containers on your machine, each for a different Airflow component:
+- **Order_ID**: A unique identifier for each order.
+- **Customer_Name**: The name of the customer who placed the order.
+- **Mobile_Model**: A detailed description of the mobile phone model, including brand, model, color, RAM, and storage capacity.
+- **Quantity**: The number of units of the mobile phone ordered.
+- **Price_per_Unit**: The price of a single unit of the mobile phone in USD.
+- **Total_Price**: The total price of the order before tax, calculated as `Quantity * Price_per_Unit`.
+- **Promotion_Code**: An optional field indicating any promotion code applied to the order. Null values indicate no promotion was used.
+- **Order_Amount**: The total amount of the order, which includes the total price and applicable tax.
+- **Tax**: The tax amount applied to the order.
+- **Order_Date**: The date when the order was placed.
+- **Payment_Status**: Indicates whether the order has been paid or is pending.
+- **Shipping_Status**: Shows the shipping status of the order, such as whether the order was delivered, returned, or is still in transit.
+- **Payment_Method**: Specifies the method of payment used, such as debit card, credit card, etc.
+- **Payment_Provider**: The payment provider used for the transaction, such as Visa, MasterCard, etc.
+- **Phone**: Contact phone number of the customer.
+- **Delivery_Address**: The address where the order was to be delivered.
 
-- Postgres: Airflow's Metadata Database
-- Webserver: The Airflow component responsible for rendering the Airflow UI
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+## 3. Design
 
-2. Verify that all 4 Docker containers were created by running 'docker ps'.
+### 3.1 Pipeline architecture and workflow
 
-Note: Running 'astro dev start' will start your project with the Airflow Webserver exposed at port 8080 and Postgres exposed at port 5432. If you already have either of those ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
+![Pipeline architecture](./images/architecture.png "Pipeline architecture")
 
-3. Access the Airflow UI for your local Airflow project. To do so, go to http://localhost:8080/ and log in with 'admin' for both your Username and Password.
+The architecture of this project includes:
 
-You should also be able to access your Postgres Database at 'localhost:5432/postgres'.
+- **Apache Airflow**: Used to orchestrate the data flow from source to storage and processing. I used AstroCLI to set up Airflow.
+- **Cloud Storage**: All raw data from the sources is loaded into Cloud Storage for management and storage.
+- **Data Warehouse (BigQuery)**:
+  - **dbt (Data Build Tool)**: Used to perform transformations on the data.
+    - **Staging Layer**: Raw data from Cloud Storage.
+    - **Intermediate Layer**: Transform data and create dimensional models.
+    - **Report Layer**: Create models for reports to gain insight into data.
+- **BigQuery**: Serves as the data warehouse platform for storing and querying transformed data.
+- **Metabase**: Used for creating reports and dashboards from the transformed data in BigQuery.
 
-Deploy Your Project to Astronomer
-=================================
+### 3.2 Dimensional Modeling with Mobile Sales
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
+![Dimensional Modeling](./images/modeling.png)
 
-Contact
-=======
+There are three dimension tables:
+- **dim_date**: The date dimension table contains detailed information about dates, allowing for comprehensive time-based analysis.
+- **dim_airports**: Contains information about airports, providing context for departure and arrival locations.
+- **dim_airlines**: Holds details about airlines, enabling analysis of flights based on their operators.
 
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+Fact table:
+- **fact_flight_activities**: Captures detailed events and metrics for each flight, referencing the dimension tables to enable rich analysis.
+
+### 3.3 DAGs
+
+![Dashboard](./images/dag.png)
+
+DAGs orchestrate the flow of data, from loading the raw files into Cloud Storage, through transformations in BigQuery, and finally into dbt models for further processing.
+
+### 3.4 Dashboard
+![Dashboard](./images/report.png)
+## Key Highlights from the Data
+
+India Dominates the Market: India has the highest revenue among the three countries. Surprisingly, the US has lower revenue than both France and India.
+
+Larger Memory Capacity is Popular: Consumers increasingly prefer mobiles with larger RAM capacities (1-6GB). So, I can see there is a growing demand for phones with larger RAM.
+
+Samsung is the Leading Brand: In 2020, Samsung had the highest revenue among all brands in all three countries. However, it could now be Apple, which has become more popular
+
+
+

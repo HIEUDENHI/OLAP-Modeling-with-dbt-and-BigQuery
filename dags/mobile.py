@@ -89,7 +89,7 @@ def mobile():
         upload_json_tasks.append(upload_json_to_gcs)
      
     create_dataset = BigQueryCreateEmptyDatasetOperator(
-        task_id='create_csv_dataset',
+        task_id='create_dataset',
         dataset_id='Mobile',  # Dataset bạn muốn tạo
         gcp_conn_id='gcp'
     )
